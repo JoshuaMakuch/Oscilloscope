@@ -6,6 +6,7 @@
 
 
 Imports System.IO.Ports
+Imports System.Runtime.CompilerServices
 Imports System.Threading
 
 Public Class OscilloscopeForm
@@ -42,10 +43,10 @@ Public Class OscilloscopeForm
         RNGVal = 25
         RNGTextBox.Text = "RNG Value: " & CStr(RNGVal)
         VerticalOffsetBar.Maximum = PBDrawing.Height
-        VerticalOffsetBar.Value = VerticalOffsetBar.Maximum / 2
-        OffsetTextBox.Text = $"{(VerticalOffsetBar.Value - PBDrawing.Height / 2) / 100} V"
-        TimePerDivisionDomain.SelectedIndex = 3
-        VoltsPerDivisionDomain.SelectedIndex = 2
+        VerticalOffsetBar.Value = VerticalOffsetBar.Maximum / 2 'Sets vertical offsetbar to match the picturebox on startup
+        OffsetTextBox.Text = $"{(VerticalOffsetBar.Value - PBDrawing.Height / 2) / 100} V" 'Sets offset textbox to 0v
+        TimePerDivisionDomain.SelectedIndex = 3 'Sets initial timer per divison to 1mS
+        VoltsPerDivisionDomain.SelectedIndex = 2 'Sets initial votls per division to 1v
         VoltsPerDivisionDomain_SelectedItemChanged(sender, e)
         TimePerDivisionDomain_SelectedItemChanged(sender, e)
         DrawGrid()
@@ -74,6 +75,7 @@ Public Class OscilloscopeForm
 
     'Clear Button
     Private Sub ClearButton_Click(sender As Object, e As EventArgs) Handles ClearButton.Click
+        'Clear the picturebox and re-draw the grid, however, doesn't reset draw state
         bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
         PBDrawing.Image = bmp
         DrawCheckBox.Focus()
@@ -83,6 +85,7 @@ Public Class OscilloscopeForm
 
     'Up Button 
     Private Sub UpButton_Click(sender As Object, e As EventArgs) Handles UpButton.Click
+        'Sets the RNGVal for random draw to +25 unless it exceeds the picture box height
         If RNGVal < PBDrawing.Height / 2 - 25 Then RNGVal += 25 Else RNGVal = PBDrawing.Height / 2
         RNGTextBox.Text = "RNG Value: " & CStr(RNGVal)
         VoltsPerDivisionDomain_SelectedItemChanged(sender, e)
@@ -90,6 +93,7 @@ Public Class OscilloscopeForm
 
     'Down Button
     Private Sub DownButton_Click(sender As Object, e As EventArgs) Handles DownButton.Click
+        'Sets the RNGVal for random draw to -25 unless it exceeds the picture box height
         If RNGVal > -PBDrawing.Height / 2 + 25 Then RNGVal -= 25 Else RNGVal = -PBDrawing.Height / 2
         RNGTextBox.Text = "RNG Value: " & CStr(RNGVal)
         VoltsPerDivisionDomain_SelectedItemChanged(sender, e)
@@ -100,22 +104,29 @@ Public Class OscilloscopeForm
         If DrawCheckBox.Checked Then
             Using g As Graphics = Graphics.FromImage(PBDrawing.Image)
                 If DrawIterations < PBDrawing.Width - 1 Then
-                    g.DrawLine(New Pen(Color.Black), DrawIterations + 1, PBDrawing.Height, DrawIterations + 1, 0)
+                    g.DrawLine(New Pen(Color.Black), DrawIterations + 1, PBDrawing.Height, DrawIterations + 1, 0) 'This deals with drawing a black line to create a sweep effect
 
+                    'This will draw a gridline every 10th of the picture box width
                     If DrawIterations Mod Math.Round(PBDrawing.Width / 10) = 0 Then
                         g.DrawLine(GridPen, DrawIterations, PBDrawing.Height, DrawIterations, 0)
                     End If
 
+                    'Draws a gridline every 8th division of the picture box
                     For i As Integer = 1 To 7
                         g.DrawLine(GridPen, DrawIterations, Convert.ToSingle((Math.Round(PBDrawing.Height * i / 8))), DrawIterations + 1, Convert.ToSingle((Math.Round(PBDrawing.Height * i / 8))))
                     Next
 
+                    'This will draw the offset line 
                     g.DrawLine(New Pen(Color.Blue), DrawIterations, -VerticalOffsetBar.Value + PBDrawing.Height, DrawIterations + 1, -VerticalOffsetBar.Value + PBDrawing.Height)
+
+                    'This will determine if an analog value or random value will be displayed
                     If RandomRadioButton.Checked Then
                         NewY = (Rnd() * (-RNGVal * VerticalScale)) + (-VerticalOffsetBar.Value + PBDrawing.Height)
                     ElseIf AnalogRadioButton.Checked Then
+                        'This ensures that the analog in value is properly scaled and drawn in the right spots according to the picture box and divisions
                         NewY = (((-AnaInVal * 3.3 / 1023) * VerticalScale) * PBDrawing.Height / 8) + (-VerticalOffsetBar.Value + PBDrawing.Height)
                     End If
+                    'This is what actually draws the line for incoming data or random data
                     g.DrawLine(myPen, DrawIterations, LastY, DrawIterations + 1, NewY)
                     LastY = NewY
                     PBDrawing.Refresh()
@@ -127,6 +138,7 @@ Public Class OscilloscopeForm
             End Using
         End If
 
+        'This portion will write analog read for channel 1 to the QY@ board
         If PortState Then
             Try
                 SerialPort1.Write({81}, 0, 1) 'Writes a 51h to the serialport
@@ -134,14 +146,10 @@ Public Class OscilloscopeForm
 
             End Try
 
+            'This will then attempt to convert the received left-justified data bytes from the QY@ boards analog channel 1 to usable data (0-1023)
             Try
-                If QYBoardSampleTime > 5 Then
-                    AnaInVal = (Convert.ToInt32(Hex(receiveByte(0)), 16)) * 4 + (Convert.ToInt32(Hex(receiveByte(1)), 16) / 64)
-                    AnalogInputTextBox.Text = CStr(Math.Round(AnaInVal * 3.3 / 1023, 2)) & " V"
-                    QYBoardSampleTime = 0
-                Else
-                    QYBoardSampleTime += 1
-                End If
+                AnaInVal = (Convert.ToInt32(Hex(receiveByte(0)), 16)) * 4 + (Convert.ToInt32(Hex(receiveByte(1)), 16) / 64)
+                AnalogInputTextBox.Text = CStr(Math.Round(AnaInVal * 3.3 / 1023, 2)) & " V"
             Catch ex As Exception
 
             End Try
@@ -171,6 +179,7 @@ Public Class OscilloscopeForm
     Private Sub TimePerDivisionDomain_SelectedItemChanged(sender As Object, e As EventArgs) Handles TimePerDivisionDomain.SelectedItemChanged
         DrawIterations = 0
 
+        'Sets the timer1 interval based on whatever domain item is selected (also clears the picture box)
         Select Case TimePerDivisionDomain.SelectedItem
             Case TimePerDivisionDomain.Items(3)
                 Timer1.Interval = 1
@@ -188,6 +197,7 @@ Public Class OscilloscopeForm
 
     'Handles the draw checkbox check changed
     Private Sub DrawCheckBox_CheckedChanged(sender As Object, e As EventArgs) Handles DrawCheckBox.CheckedChanged
+        'This helps to identify if the form is in a drawing state or not
         DrawIterations = 0
         If DrawCheckBox.Checked Then
             DrawCheckBox.Text = "Drawing"
@@ -199,6 +209,8 @@ Public Class OscilloscopeForm
     'Handles the VoltsPerDivision Domain
     Private Sub VoltsPerDivisionDomain_SelectedItemChanged(sender As Object, e As EventArgs) Handles VoltsPerDivisionDomain.SelectedItemChanged
         DrawIterations = 0
+
+        'Sets the voltage scale based on whatever domain item is selected (also clears the picture box)
 
         Select Case VoltsPerDivisionDomain.SelectedItem
             Case VoltsPerDivisionDomain.Items(4)
@@ -219,7 +231,9 @@ Public Class OscilloscopeForm
 
     'Handles the Vertical Offset Bar scroll
     Private Sub VerticalOffsetBar_Scroll(sender As Object, e As EventArgs) Handles VerticalOffsetBar.Scroll
+        'Sets the offset bar textbox
         OffsetTextBox.Text = $"{Math.Round((VerticalOffsetBar.Value - PBDrawing.Height / 2) / 100 / VerticalScale, 2)} V"
+        'This allows the offset line to be live adjusted when not drawing
         If Not DrawCheckBox.Checked Then DrawGrid()
     End Sub
 
@@ -228,7 +242,9 @@ Public Class OscilloscopeForm
         COMPortSettingsForm.Show()
     End Sub
 
+    'Handles reload settings file tool strip menu item click
     Private Sub ReloadSettingsFileToolStripMenuItem_Click(sender As Object, e As EventArgs) Handles ReloadSettingsFileToolStripMenuItem.Click
+        'Attempt to reload the Com port settings file, if not declare a lack of settings file
         Try
             FileOpen(1, FileName, OpenMode.Input) 'Open file for input
             Input(1, SelectedCOMPort)
@@ -244,7 +260,9 @@ Public Class OscilloscopeForm
         End Try
     End Sub
 
+    'Handles the connect tool strip menu item click
     Private Sub ConnectToolStripMenuItem_Click_1(sender As Object, e As EventArgs) Handles ConnectToolStripMenuItem.Click
+        'Will attempt to connect to the serial port if not alread connected
         If Not PortState Then
             If SelectedBaudRate <> "" Then SerialPort1.BaudRate = SelectedBaudRate
             If SelectedCOMPort <> "" Then SerialPort1.PortName = SelectedCOMPort
@@ -256,7 +274,7 @@ Public Class OscilloscopeForm
                 PortState = False
                 MsgBox("Port Already Open Or Port Unavailable. Potentially try reload settings file in menu strip.")
             End Try
-        Else
+        Else 'If already connected then assume the user is trying to DC when pressing this again, attempt to disconnect
             Try
                 SerialPort1.Close()
                 PortState = False
