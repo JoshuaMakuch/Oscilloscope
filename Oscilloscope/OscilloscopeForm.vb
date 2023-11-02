@@ -19,7 +19,6 @@ Public Class OscilloscopeForm
     Dim VerticalScale As Double
     Dim LastX As Integer
     Dim LastY As Integer
-    Dim NewX As Integer
     Dim NewY As Integer
     Dim DrawIterations As Integer
     Dim FileName As String = CurDir() & "\" & "COMPortSettings" & ".txt"
@@ -29,8 +28,10 @@ Public Class OscilloscopeForm
     Public receiveByte(18) As Byte 'Receive Data Bytes
     Dim NewData As Integer
     Dim DataIn1, DataIn2, DataIn3, DataIn4, DataIn5, DataIn6, DataIn7, DataIn8 As Integer
-    Dim QYBoardSampleTime As Integer
     Dim AnaInVal As Integer
+    Dim Records(96) As Single
+    Dim MaxValue As Single
+    Dim MinValue As Single
 
     'On Form Load
     Private Sub OscilloscopeForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -54,6 +55,12 @@ Public Class OscilloscopeForm
         SerialPort1.DataBits = 8 '8 data bits
         SerialPort1.StopBits = IO.Ports.StopBits.One '1 stop bit
         SerialPort1.Parity = IO.Ports.Parity.None 'no parity
+        MaxValue = 0 'Sets the max and min values to 0v
+        MinValue = 0
+        MaxRecordedValueTextBox.Text = $"{MaxValue} V"
+        MinRecordedValueTextBox.Text = $"{MinValue} V"
+
+        LastY = PBDrawing.Height / 2
     End Sub
 
     'THIS IS THE MAIN DRAWING CODE||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -126,38 +133,51 @@ Public Class OscilloscopeForm
                         'This ensures that the analog in value is properly scaled and drawn in the right spots according to the picture box and divisions
                         NewY = (((-AnaInVal * 3.3 / 1023) * VerticalScale) * PBDrawing.Height / 8) + (-VerticalOffsetBar.Value + PBDrawing.Height)
                     End If
+
+                    'This records every x / record length data point 
+                    Dim IndexRecord As Integer = CInt(DrawIterations / CInt(PBDrawing.Width / Records.Length))
+                    If DrawIterations Mod CInt(PBDrawing.Width / Records.Length) = 0 Then
+                        Records(IndexRecord) = Math.Round(-((NewY - PBDrawing.Height / 2) / VerticalScale / (PBDrawing.Height / 8)), 2)
+                        MaxValue = Records.Max
+                        MaxRecordedValueTextBox.Text = $"{MaxValue} V"
+                        MinValue = Records.Min
+                        MinRecordedValueTextBox.Text = $"{MinValue} V"
+                    End If
+
+
                     'This is what actually draws the line for incoming data or random data
-                    g.DrawLine(myPen, DrawIterations, LastY, DrawIterations + 1, NewY)
+                    g.DrawLine(myPen, LastX, LastY, DrawIterations + 1, NewY)
+                    LastX = DrawIterations
                     LastY = NewY
+
                     PBDrawing.Refresh()
                     DrawIterations += 1
-
                 Else
                     DrawIterations = 0
                 End If
             End Using
-        End If
+                        End If
 
-        'This portion will write analog read for channel 1 to the QY@ board
-        If PortState Then
-            Try
-                SerialPort1.Write({81}, 0, 1) 'Writes a 51h to the serialport
-            Catch ex As Exception
+                        'This portion will write analog read for channel 1 to the QY@ board
+                        If PortState Then
+                            Try
+                                SerialPort1.Write({81}, 0, 1) 'Writes a 51h to the serialport
+                            Catch ex As Exception
 
-            End Try
+                            End Try
 
-            'This will then attempt to convert the received left-justified data bytes from the QY@ boards analog channel 1 to usable data (0-1023)
-            Try
-                AnaInVal = (Convert.ToInt32(Hex(receiveByte(0)), 16)) * 4 + (Convert.ToInt32(Hex(receiveByte(1)), 16) / 64)
-                AnalogInputTextBox.Text = CStr(Math.Round(AnaInVal * 3.3 / 1023, 2)) & " V"
-            Catch ex As Exception
+                            'This will then attempt to convert the received left-justified data bytes from the QY@ boards analog channel 1 to usable data (0-1023)
+                            Try
+                                AnaInVal = (Convert.ToInt32(Hex(receiveByte(0)), 16)) * 4 + (Convert.ToInt32(Hex(receiveByte(1)), 16) / 64)
+                                AnalogInputTextBox.Text = CStr(Math.Round(AnaInVal * 3.3 / 1023, 2)) & " V"
+                            Catch ex As Exception
 
-            End Try
-        End If
+                            End Try
+                        End If
 
-        PortStateCheckBox.Checked = PortState
+                        PortStateCheckBox.Checked = PortState
 
-    End Sub
+                        End Sub
 
     'Custom Sub DrawGridhandle
     Sub DrawGrid()
@@ -232,9 +252,9 @@ Public Class OscilloscopeForm
     'Handles the Vertical Offset Bar scroll
     Private Sub VerticalOffsetBar_Scroll(sender As Object, e As EventArgs) Handles VerticalOffsetBar.Scroll
         'Sets the offset bar textbox
-        OffsetTextBox.Text = $"{Math.Round((VerticalOffsetBar.Value - PBDrawing.Height / 2) / 100 / VerticalScale, 2)} V"
-        'This allows the offset line to be live adjusted when not drawing
-        If Not DrawCheckBox.Checked Then DrawGrid()
+        OffsetTextBox.Text = $"{Math.Round((VerticalOffsetBar.Value - PBDrawing.Height / 2) / 100 / VerticalScale,2)} V"
+                            'This allows the offset line to be live adjusted when not drawing
+                            If Not DrawCheckBox.Checked Then DrawGrid()
     End Sub
 
     'Goes to COM Port settings form
@@ -331,5 +351,4 @@ Public Class OscilloscopeForm
     End Sub
 
 End Class
-
 

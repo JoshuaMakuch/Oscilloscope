@@ -53,6 +53,10 @@ Partial Class OscilloscopeForm
         Me.AnalogRadioButton = New System.Windows.Forms.RadioButton()
         Me.DrawControlsGroupBox = New System.Windows.Forms.GroupBox()
         Me.DrawCheckBox = New System.Windows.Forms.CheckBox()
+        Me.MinRecordedValueLabel = New System.Windows.Forms.Label()
+        Me.MinRecordedValueTextBox = New System.Windows.Forms.TextBox()
+        Me.MaxValueLabel = New System.Windows.Forms.Label()
+        Me.MaxRecordedValueTextBox = New System.Windows.Forms.TextBox()
         CType(Me.PBDrawing, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.VerticalOffsetBar, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.MenuStrip1.SuspendLayout()
@@ -176,7 +180,7 @@ Partial Class OscilloscopeForm
         Me.MenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ComPortSettingsToolStripMenuItem})
         Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
         Me.MenuStrip1.Name = "MenuStrip1"
-        Me.MenuStrip1.Size = New System.Drawing.Size(1227, 28)
+        Me.MenuStrip1.Size = New System.Drawing.Size(1227, 30)
         Me.MenuStrip1.TabIndex = 14
         Me.MenuStrip1.Text = "MenuStrip1"
         '
@@ -184,7 +188,7 @@ Partial Class OscilloscopeForm
         '
         Me.ComPortSettingsToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ConnectToolStripMenuItem, Me.SettingsToolStripMenuItem, Me.ReloadSettingsFileToolStripMenuItem})
         Me.ComPortSettingsToolStripMenuItem.Name = "ComPortSettingsToolStripMenuItem"
-        Me.ComPortSettingsToolStripMenuItem.Size = New System.Drawing.Size(143, 24)
+        Me.ComPortSettingsToolStripMenuItem.Size = New System.Drawing.Size(143, 26)
         Me.ComPortSettingsToolStripMenuItem.Text = "COM Port Settings"
         '
         'ConnectToolStripMenuItem
@@ -322,12 +326,52 @@ Partial Class OscilloscopeForm
         Me.DrawCheckBox.TextAlign = System.Drawing.ContentAlignment.MiddleCenter
         Me.DrawCheckBox.UseVisualStyleBackColor = False
         '
+        'MinRecordedValueLabel
+        '
+        Me.MinRecordedValueLabel.AutoSize = True
+        Me.MinRecordedValueLabel.BackColor = System.Drawing.SystemColors.ControlDarkDark
+        Me.MinRecordedValueLabel.Location = New System.Drawing.Point(135, 600)
+        Me.MinRecordedValueLabel.Name = "MinRecordedValueLabel"
+        Me.MinRecordedValueLabel.Size = New System.Drawing.Size(136, 16)
+        Me.MinRecordedValueLabel.TabIndex = 29
+        Me.MinRecordedValueLabel.Text = "Min Recorded Value: "
+        '
+        'MinRecordedValueTextBox
+        '
+        Me.MinRecordedValueTextBox.Location = New System.Drawing.Point(138, 619)
+        Me.MinRecordedValueTextBox.Name = "MinRecordedValueTextBox"
+        Me.MinRecordedValueTextBox.ReadOnly = True
+        Me.MinRecordedValueTextBox.Size = New System.Drawing.Size(141, 22)
+        Me.MinRecordedValueTextBox.TabIndex = 28
+        '
+        'MaxValueLabel
+        '
+        Me.MaxValueLabel.AutoSize = True
+        Me.MaxValueLabel.BackColor = System.Drawing.SystemColors.ControlDarkDark
+        Me.MaxValueLabel.Location = New System.Drawing.Point(135, 556)
+        Me.MaxValueLabel.Name = "MaxValueLabel"
+        Me.MaxValueLabel.Size = New System.Drawing.Size(137, 16)
+        Me.MaxValueLabel.TabIndex = 27
+        Me.MaxValueLabel.Text = "Max Recorded Value:"
+        '
+        'MaxRecordedValueTextBox
+        '
+        Me.MaxRecordedValueTextBox.Location = New System.Drawing.Point(138, 575)
+        Me.MaxRecordedValueTextBox.Name = "MaxRecordedValueTextBox"
+        Me.MaxRecordedValueTextBox.ReadOnly = True
+        Me.MaxRecordedValueTextBox.Size = New System.Drawing.Size(141, 22)
+        Me.MaxRecordedValueTextBox.TabIndex = 26
+        '
         'OscilloscopeForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.BackColor = System.Drawing.SystemColors.ControlDarkDark
         Me.ClientSize = New System.Drawing.Size(1227, 653)
+        Me.Controls.Add(Me.MinRecordedValueLabel)
+        Me.Controls.Add(Me.MinRecordedValueTextBox)
+        Me.Controls.Add(Me.MaxValueLabel)
+        Me.Controls.Add(Me.MaxRecordedValueTextBox)
         Me.Controls.Add(Me.DrawCheckBox)
         Me.Controls.Add(Me.DrawControlsGroupBox)
         Me.Controls.Add(Me.PortStateCheckBox)
@@ -392,4 +436,8 @@ Partial Class OscilloscopeForm
     Friend WithEvents AnalogRadioButton As RadioButton
     Friend WithEvents DrawControlsGroupBox As GroupBox
     Friend WithEvents DrawCheckBox As CheckBox
+    Friend WithEvents MinRecordedValueLabel As Label
+    Friend WithEvents MinRecordedValueTextBox As TextBox
+    Friend WithEvents MaxValueLabel As Label
+    Friend WithEvents MaxRecordedValueTextBox As TextBox
 End Class
