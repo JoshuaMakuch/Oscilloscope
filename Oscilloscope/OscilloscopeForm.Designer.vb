@@ -52,6 +52,7 @@ Partial Class OscilloscopeForm
         Me.RandomRadioButton = New System.Windows.Forms.RadioButton()
         Me.AnalogRadioButton = New System.Windows.Forms.RadioButton()
         Me.DrawControlsGroupBox = New System.Windows.Forms.GroupBox()
+        Me.TemperatureDrawRadioButton = New System.Windows.Forms.RadioButton()
         Me.DrawCheckBox = New System.Windows.Forms.CheckBox()
         Me.MinRecordedValueLabel = New System.Windows.Forms.Label()
         Me.MinRecordedValueTextBox = New System.Windows.Forms.TextBox()
@@ -180,7 +181,7 @@ Partial Class OscilloscopeForm
         Me.MenuStrip1.Items.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ComPortSettingsToolStripMenuItem})
         Me.MenuStrip1.Location = New System.Drawing.Point(0, 0)
         Me.MenuStrip1.Name = "MenuStrip1"
-        Me.MenuStrip1.Size = New System.Drawing.Size(1227, 30)
+        Me.MenuStrip1.Size = New System.Drawing.Size(1227, 28)
         Me.MenuStrip1.TabIndex = 14
         Me.MenuStrip1.Text = "MenuStrip1"
         '
@@ -188,7 +189,7 @@ Partial Class OscilloscopeForm
         '
         Me.ComPortSettingsToolStripMenuItem.DropDownItems.AddRange(New System.Windows.Forms.ToolStripItem() {Me.ConnectToolStripMenuItem, Me.SettingsToolStripMenuItem, Me.ReloadSettingsFileToolStripMenuItem})
         Me.ComPortSettingsToolStripMenuItem.Name = "ComPortSettingsToolStripMenuItem"
-        Me.ComPortSettingsToolStripMenuItem.Size = New System.Drawing.Size(143, 26)
+        Me.ComPortSettingsToolStripMenuItem.Size = New System.Drawing.Size(143, 24)
         Me.ComPortSettingsToolStripMenuItem.Text = "COM Port Settings"
         '
         'ConnectToolStripMenuItem
@@ -304,14 +305,25 @@ Partial Class OscilloscopeForm
         '
         'DrawControlsGroupBox
         '
+        Me.DrawControlsGroupBox.Controls.Add(Me.TemperatureDrawRadioButton)
         Me.DrawControlsGroupBox.Controls.Add(Me.AnalogRadioButton)
         Me.DrawControlsGroupBox.Controls.Add(Me.RandomRadioButton)
-        Me.DrawControlsGroupBox.Location = New System.Drawing.Point(723, 556)
+        Me.DrawControlsGroupBox.Location = New System.Drawing.Point(579, 556)
         Me.DrawControlsGroupBox.Name = "DrawControlsGroupBox"
-        Me.DrawControlsGroupBox.Size = New System.Drawing.Size(126, 85)
+        Me.DrawControlsGroupBox.Size = New System.Drawing.Size(258, 85)
         Me.DrawControlsGroupBox.TabIndex = 24
         Me.DrawControlsGroupBox.TabStop = False
         Me.DrawControlsGroupBox.Text = "Draw Controls"
+        '
+        'TemperatureDrawRadioButton
+        '
+        Me.TemperatureDrawRadioButton.AutoSize = True
+        Me.TemperatureDrawRadioButton.Location = New System.Drawing.Point(126, 21)
+        Me.TemperatureDrawRadioButton.Name = "TemperatureDrawRadioButton"
+        Me.TemperatureDrawRadioButton.Size = New System.Drawing.Size(98, 20)
+        Me.TemperatureDrawRadioButton.TabIndex = 25
+        Me.TemperatureDrawRadioButton.Text = "Temp Draw"
+        Me.TemperatureDrawRadioButton.UseVisualStyleBackColor = True
         '
         'DrawCheckBox
         '
@@ -440,4 +452,5 @@ Partial Class OscilloscopeForm
     Friend WithEvents MinRecordedValueTextBox As TextBox
     Friend WithEvents MaxValueLabel As Label
     Friend WithEvents MaxRecordedValueTextBox As TextBox
+    Friend WithEvents TemperatureDrawRadioButton As RadioButton
 End Class

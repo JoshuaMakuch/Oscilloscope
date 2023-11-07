@@ -6,6 +6,7 @@
 
 
 Imports System.IO.Ports
+Imports System.Linq.Expressions
 Imports System.Runtime.CompilerServices
 Imports System.Threading
 
@@ -19,6 +20,7 @@ Public Class OscilloscopeForm
     Dim VerticalScale As Double
     Dim LastX As Integer
     Dim LastY As Integer
+    Dim NewX As Integer
     Dim NewY As Integer
     Dim DrawIterations As Integer
     Dim FileName As String = CurDir() & "\" & "COMPortSettings" & ".txt"
@@ -82,12 +84,26 @@ Public Class OscilloscopeForm
 
     'Clear Button
     Private Sub ClearButton_Click(sender As Object, e As EventArgs) Handles ClearButton.Click
-        'Clear the picturebox and re-draw the grid, however, doesn't reset draw state
-        bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
-        PBDrawing.Image = bmp
-        DrawCheckBox.Focus()
-        DrawIterations = 0
-        DrawGrid()
+        If TemperatureDrawRadioButton.Checked Then
+            TemperatureDrawRadioButton_CheckedChanged(sender, e)
+            For i As Integer = 0 To Records.Length - 1
+                Records(i) = 0
+            Next
+        Else
+            'Clear the picturebox and re-draw the grid, however, doesn't reset draw state
+            bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
+            PBDrawing.Image = bmp
+            DrawCheckBox.Focus()
+            DrawIterations = 0
+            DrawGrid()
+            'Clear Records array
+            For i As Integer = 0 To Records.Length - 1
+                Records(i) = 0
+            Next
+            'Reset LastX and LastY
+            LastX = 0
+            LastY = PBDrawing.Height / 2
+        End If
     End Sub
 
     'Up Button 
@@ -134,9 +150,9 @@ Public Class OscilloscopeForm
                         NewY = (((-AnaInVal * 3.3 / 1023) * VerticalScale) * PBDrawing.Height / 8) + (-VerticalOffsetBar.Value + PBDrawing.Height)
                     End If
 
-                    'This records every x / record length data point 
-                    Dim IndexRecord As Integer = CInt(DrawIterations / CInt(PBDrawing.Width / Records.Length))
                     If DrawIterations Mod CInt(PBDrawing.Width / Records.Length) = 0 Then
+                        'This records every x / record length data point 
+                        Dim IndexRecord As Integer = CInt(DrawIterations / CInt(PBDrawing.Width / Records.Length))
                         Records(IndexRecord) = Math.Round(-((NewY - PBDrawing.Height / 2) / VerticalScale / (PBDrawing.Height / 8)), 2)
                         MaxValue = Records.Max
                         MaxRecordedValueTextBox.Text = $"{MaxValue} V"
@@ -156,28 +172,74 @@ Public Class OscilloscopeForm
                     DrawIterations = 0
                 End If
             End Using
-                        End If
+        ElseIf TemperatureDrawRadioButton.Checked Then
 
-                        'This portion will write analog read for channel 1 to the QY@ board
-                        If PortState Then
-                            Try
-                                SerialPort1.Write({81}, 0, 1) 'Writes a 51h to the serialport
-                            Catch ex As Exception
+            'Every timer1 tick the PB will clear and re-write all currently stored data from the records array
+            bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
+            PBDrawing.Image = bmp
 
-                            End Try
+            Using g As Graphics = Graphics.FromImage(PBDrawing.Image)
+                If DrawIterations < Records.Length - 1 Then
 
-                            'This will then attempt to convert the received left-justified data bytes from the QY@ boards analog channel 1 to usable data (0-1023)
-                            Try
-                                AnaInVal = (Convert.ToInt32(Hex(receiveByte(0)), 16)) * 4 + (Convert.ToInt32(Hex(receiveByte(1)), 16) / 64)
-                                AnalogInputTextBox.Text = CStr(Math.Round(AnaInVal * 3.3 / 1023, 2)) & " V"
-                            Catch ex As Exception
+                    'Re-draw gridlines
+                    For i As Integer = 1 To 9
+                        g.DrawLine(GridPen, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), 0, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), PBDrawing.Height)
+                    Next
+                    g.DrawLine(New Pen(Color.Red), 0, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Yellow), 0, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.White), 0, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Green), 0, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Blue), 0, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)))
 
-                            End Try
-                        End If
+                    'Find the current temp value, store it and reset the max and min value as well as the scale. This happens every 15 mins
+                    NewY = (((-AnaInVal * 3.3 / 1023)) * PBDrawing.Height / 8) + PBDrawing.Height
+                    Records(DrawIterations) = Math.Round(-((NewY - PBDrawing.Height / 2) / 1 / (PBDrawing.Height / 8)), 2)
+                    MaxValue = Records.Max
+                    MaxRecordedValueTextBox.Text = $"{MaxValue} V"
+                    MinValue = Records.Min
+                    MinRecordedValueTextBox.Text = $"{MinValue} V"
+                    VerticalScale = Math.Abs(MaxValue - MinValue) / 6.6
 
-                        PortStateCheckBox.Checked = PortState
+                    'Redraw the entire records array up until draw iterations
+                    For i As Integer = 0 To Records.Length - 1
+                        'This ensures that the analog in value is properly scaled and drawn in the right spots according to the picture box and divisions
+                        NewY = CInt(((Records(i) * VerticalScale) * PBDrawing.Height / 8) + PBDrawing.Height)
+                        'Sets the NewX to whatever value 
+                        NewX = CInt(i * PBDrawing.Width / Records.Length)
+                        'This is what actually draws the line for incoming data or random data
+                        g.DrawLine(myPen, LastX, LastY, DrawIterations + 1, NewY)
+                        LastX = NewX
+                        LastY = NewY
+                    Next
 
-                        End Sub
+                    PBDrawing.Refresh()
+                    DrawIterations += 1
+                Else
+                    DrawIterations = 0
+                End If
+            End Using
+        End If
+
+        'This portion will write analog read for channel 1 to the QY@ board
+        If PortState Then
+            Try
+                SerialPort1.Write({81}, 0, 1) 'Writes a 51h to the serialport
+            Catch ex As Exception
+
+            End Try
+
+            'This will then attempt to convert the received left-justified data bytes from the QY@ boards analog channel 1 to usable data (0-1023)
+            Try
+                AnaInVal = (Convert.ToInt32(Hex(receiveByte(0)), 16)) * 4 + (Convert.ToInt32(Hex(receiveByte(1)), 16) / 64)
+                AnalogInputTextBox.Text = CStr(Math.Round(AnaInVal * 3.3 / 1023, 2)) & " V"
+            Catch ex As Exception
+
+            End Try
+        End If
+
+        PortStateCheckBox.Checked = PortState
+
+    End Sub
 
     'Custom Sub DrawGridhandle
     Sub DrawGrid()
@@ -226,6 +288,53 @@ Public Class OscilloscopeForm
         End If
     End Sub
 
+    Private Sub TemperatureDrawRadioButton_CheckedChanged(sender As Object, e As EventArgs) Handles TemperatureDrawRadioButton.CheckedChanged
+
+        If TemperatureDrawRadioButton.Checked Then
+            If PortState Then
+                DrawCheckBox.Checked = False
+                DrawCheckBox.Enabled = False
+                VerticalOffsetBar.Enabled = False
+                VoltsPerDivisionDomain.Enabled = False
+                TimePerDivisionDomain.Enabled = False
+
+                bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
+                PBDrawing.Image = bmp
+                Using g As Graphics = Graphics.FromImage(PBDrawing.Image)
+                    For i As Integer = 1 To 9
+                        g.DrawLine(GridPen, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), 0, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), PBDrawing.Height)
+                    Next
+                    g.DrawLine(New Pen(Color.Red), 0, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Yellow), 0, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.White), 0, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Green), 0, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Blue), 0, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)))
+                End Using
+                'Sets timer1 inteveral to 15 min invtervals
+                Timer1.Interval = 100
+            Else
+                RandomRadioButton.Checked = True
+                DrawCheckBox.Enabled = True
+                VerticalOffsetBar.Enabled = True
+                VoltsPerDivisionDomain.Enabled = True
+                TimePerDivisionDomain.Enabled = True
+                VoltsPerDivisionDomain_SelectedItemChanged(sender, e)
+                TimePerDivisionDomain_SelectedItemChanged(sender, e)
+                ClearButton_Click(sender, e)
+                MsgBox("Port is not setup, please setup the port before attempting temperature readings.")
+            End If
+        Else
+            RandomRadioButton.Checked = True
+            DrawCheckBox.Enabled = True
+            VerticalOffsetBar.Enabled = True
+            VoltsPerDivisionDomain.Enabled = True
+            TimePerDivisionDomain.Enabled = True
+            VoltsPerDivisionDomain_SelectedItemChanged(sender, e)
+            TimePerDivisionDomain_SelectedItemChanged(sender, e)
+            ClearButton_Click(sender, e)
+        End If
+    End Sub
+
     'Handles the VoltsPerDivision Domain
     Private Sub VoltsPerDivisionDomain_SelectedItemChanged(sender As Object, e As EventArgs) Handles VoltsPerDivisionDomain.SelectedItemChanged
         DrawIterations = 0
@@ -253,8 +362,8 @@ Public Class OscilloscopeForm
     Private Sub VerticalOffsetBar_Scroll(sender As Object, e As EventArgs) Handles VerticalOffsetBar.Scroll
         'Sets the offset bar textbox
         OffsetTextBox.Text = $"{Math.Round((VerticalOffsetBar.Value - PBDrawing.Height / 2) / 100 / VerticalScale,2)} V"
-                            'This allows the offset line to be live adjusted when not drawing
-                            If Not DrawCheckBox.Checked Then DrawGrid()
+        'This allows the offset line to be live adjusted when not drawing
+        If Not DrawCheckBox.Checked Then DrawGrid()
     End Sub
 
     'Goes to COM Port settings form
@@ -275,8 +384,8 @@ Public Class OscilloscopeForm
             COMPortTextBox.Text = SelectedCOMPort
             BaudRateTextBox.Text = SelectedBaudRate
         Catch ex As Exception
+            MsgBox("Settings file not found, please open settings to create one.")
             FileClose(1)
-            MsgBox("Settings file not found, one has been created, please reopen settings.")
         End Try
     End Sub
 
