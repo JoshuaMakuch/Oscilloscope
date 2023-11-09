@@ -86,9 +86,6 @@ Public Class OscilloscopeForm
     Private Sub ClearButton_Click(sender As Object, e As EventArgs) Handles ClearButton.Click
         If TemperatureDrawRadioButton.Checked Then
             TemperatureDrawRadioButton_CheckedChanged(sender, e)
-            For i As Integer = 0 To Records.Length - 1
-                Records(i) = 0
-            Next
         Else
             'Clear the picturebox and re-draw the grid, however, doesn't reset draw state
             bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
@@ -174,50 +171,32 @@ Public Class OscilloscopeForm
             End Using
         ElseIf TemperatureDrawRadioButton.Checked Then
 
-            'Every timer1 tick the PB will clear and re-write all currently stored data from the records array
-            bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
-            PBDrawing.Image = bmp
-
-            Using g As Graphics = Graphics.FromImage(PBDrawing.Image)
-                If DrawIterations < Records.Length - 1 Then
-
-                    'Re-draw gridlines
-                    For i As Integer = 1 To 9
-                        g.DrawLine(GridPen, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), 0, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), PBDrawing.Height)
-                    Next
-                    g.DrawLine(New Pen(Color.Red), 0, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)))
-                    g.DrawLine(New Pen(Color.Yellow), 0, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)))
-                    g.DrawLine(New Pen(Color.White), 0, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)))
-                    g.DrawLine(New Pen(Color.Green), 0, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)))
-                    g.DrawLine(New Pen(Color.Blue), 0, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)))
-
-                    'Find the current temp value, store it and reset the max and min value as well as the scale. This happens every 15 mins
+            If DrawIterations < Records.Length - 1 Then
+                Using g As Graphics = Graphics.FromImage(PBDrawing.Image)
+                    'Find the equivalent voltage value and turn it into a usable height value
                     NewY = (((-AnaInVal * 3.3 / 1023)) * PBDrawing.Height / 8) + PBDrawing.Height
-                    Records(DrawIterations) = Math.Round(-((NewY - PBDrawing.Height / 2) / 1 / (PBDrawing.Height / 8)), 2)
+                    Records(DrawIterations) = Math.Round(AnaInVal * 3.3 / 1023, 2)
                     MaxValue = Records.Max
                     MaxRecordedValueTextBox.Text = $"{MaxValue} V"
                     MinValue = Records.Min
                     MinRecordedValueTextBox.Text = $"{MinValue} V"
-                    VerticalScale = Math.Abs(MaxValue - MinValue) / 6.6
 
-                    'Redraw the entire records array up until draw iterations
-                    For i As Integer = 0 To Records.Length - 1
-                        'This ensures that the analog in value is properly scaled and drawn in the right spots according to the picture box and divisions
-                        NewY = CInt(((Records(i) * VerticalScale) * PBDrawing.Height / 8) + PBDrawing.Height)
-                        'Sets the NewX to whatever value 
-                        NewX = CInt(i * PBDrawing.Width / Records.Length)
-                        'This is what actually draws the line for incoming data or random data
-                        g.DrawLine(myPen, LastX, LastY, DrawIterations + 1, NewY)
-                        LastX = NewX
-                        LastY = NewY
-                    Next
+                    VerticalScale = Math.Abs(MaxValue - MinValue) / 6.6
+                    'This ensures that the analog in value is properly scaled and drawn in the right spots according to the picture box and divisions
+                    NewY = CInt(((-Records(DrawIterations) * VerticalScale) * PBDrawing.Height / 8) + (PBDrawing.Height / 2))
+                    'Sets the NewX to whatever value 
+                    NewX = CInt(DrawIterations * (PBDrawing.Width / Records.Length))
+                    'This is what actually draws the line for incoming data or random data
+                    g.DrawLine(myPen, LastX, LastY, NewX, NewY)
+                    LastX = NewX
+                    LastY = NewY
 
                     PBDrawing.Refresh()
                     DrawIterations += 1
-                Else
-                    DrawIterations = 0
-                End If
-            End Using
+                End Using
+            Else
+                TemperatureDrawRadioButton_CheckedChanged(sender, e)
+            End If
         End If
 
         'This portion will write analog read for channel 1 to the QY@ board
@@ -259,7 +238,6 @@ Public Class OscilloscopeForm
 
     'Handles the TimePerDivision Domain
     Private Sub TimePerDivisionDomain_SelectedItemChanged(sender As Object, e As EventArgs) Handles TimePerDivisionDomain.SelectedItemChanged
-        DrawIterations = 0
 
         'Sets the timer1 interval based on whatever domain item is selected (also clears the picture box)
         Select Case TimePerDivisionDomain.SelectedItem
@@ -310,8 +288,21 @@ Public Class OscilloscopeForm
                     g.DrawLine(New Pen(Color.Green), 0, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)))
                     g.DrawLine(New Pen(Color.Blue), 0, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)))
                 End Using
+
+                'Clear Records
+                For i As Integer = 0 To Records.Length - 1
+                    Records(i) = 0
+                Next
+                'Clear Draw Iterations
+                DrawIterations = 0
+                'Reset LastX and LastY
+                LastX = 0
+                LastY = PBDrawing.Height / 2
+
                 'Sets timer1 inteveral to 15 min invtervals
                 Timer1.Interval = 100
+
+
             Else
                 RandomRadioButton.Checked = True
                 DrawCheckBox.Enabled = True

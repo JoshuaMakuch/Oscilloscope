@@ -215,7 +215,7 @@ Partial Class OscilloscopeForm
         '
         'AnalogInputTextBox
         '
-        Me.AnalogInputTextBox.Location = New System.Drawing.Point(15, 607)
+        Me.AnalogInputTextBox.Location = New System.Drawing.Point(11, 619)
         Me.AnalogInputTextBox.Name = "AnalogInputTextBox"
         Me.AnalogInputTextBox.ReadOnly = True
         Me.AnalogInputTextBox.Size = New System.Drawing.Size(114, 22)
@@ -225,7 +225,7 @@ Partial Class OscilloscopeForm
         '
         Me.AnaloginputLabel.AutoSize = True
         Me.AnaloginputLabel.BackColor = System.Drawing.SystemColors.ControlDarkDark
-        Me.AnaloginputLabel.Location = New System.Drawing.Point(12, 588)
+        Me.AnaloginputLabel.Location = New System.Drawing.Point(8, 600)
         Me.AnaloginputLabel.Name = "AnaloginputLabel"
         Me.AnaloginputLabel.Size = New System.Drawing.Size(84, 16)
         Me.AnaloginputLabel.TabIndex = 16
