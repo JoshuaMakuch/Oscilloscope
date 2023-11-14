@@ -58,6 +58,8 @@ Partial Class OscilloscopeForm
         Me.MinRecordedValueTextBox = New System.Windows.Forms.TextBox()
         Me.MaxValueLabel = New System.Windows.Forms.Label()
         Me.MaxRecordedValueTextBox = New System.Windows.Forms.TextBox()
+        Me.TempRecordIntervalDomain = New System.Windows.Forms.DomainUpDown()
+        Me.TempRecordIntervalLabel = New System.Windows.Forms.Label()
         CType(Me.PBDrawing, System.ComponentModel.ISupportInitialize).BeginInit()
         CType(Me.VerticalOffsetBar, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.MenuStrip1.SuspendLayout()
@@ -374,12 +376,35 @@ Partial Class OscilloscopeForm
         Me.MaxRecordedValueTextBox.Size = New System.Drawing.Size(141, 22)
         Me.MaxRecordedValueTextBox.TabIndex = 26
         '
+        'TempRecordIntervalDomain
+        '
+        Me.TempRecordIntervalDomain.Items.Add("100mS")
+        Me.TempRecordIntervalDomain.Items.Add("1s")
+        Me.TempRecordIntervalDomain.Items.Add("1min")
+        Me.TempRecordIntervalDomain.Items.Add("15min")
+        Me.TempRecordIntervalDomain.Location = New System.Drawing.Point(285, 576)
+        Me.TempRecordIntervalDomain.Name = "TempRecordIntervalDomain"
+        Me.TempRecordIntervalDomain.Size = New System.Drawing.Size(137, 22)
+        Me.TempRecordIntervalDomain.TabIndex = 30
+        Me.TempRecordIntervalDomain.Text = "100mS"
+        '
+        'TempRecordIntervalLabel
+        '
+        Me.TempRecordIntervalLabel.AutoSize = True
+        Me.TempRecordIntervalLabel.Location = New System.Drawing.Point(282, 558)
+        Me.TempRecordIntervalLabel.Name = "TempRecordIntervalLabel"
+        Me.TempRecordIntervalLabel.Size = New System.Drawing.Size(140, 16)
+        Me.TempRecordIntervalLabel.TabIndex = 31
+        Me.TempRecordIntervalLabel.Text = "Temp Record Interval:"
+        '
         'OscilloscopeForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.BackColor = System.Drawing.SystemColors.ControlDarkDark
         Me.ClientSize = New System.Drawing.Size(1227, 653)
+        Me.Controls.Add(Me.TempRecordIntervalLabel)
+        Me.Controls.Add(Me.TempRecordIntervalDomain)
         Me.Controls.Add(Me.MinRecordedValueLabel)
         Me.Controls.Add(Me.MinRecordedValueTextBox)
         Me.Controls.Add(Me.MaxValueLabel)
@@ -453,4 +478,6 @@ Partial Class OscilloscopeForm
     Friend WithEvents MaxValueLabel As Label
     Friend WithEvents MaxRecordedValueTextBox As TextBox
     Friend WithEvents TemperatureDrawRadioButton As RadioButton
+    Friend WithEvents TempRecordIntervalDomain As DomainUpDown
+    Friend WithEvents TempRecordIntervalLabel As Label
 End Class

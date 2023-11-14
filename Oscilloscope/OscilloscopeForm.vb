@@ -5,6 +5,7 @@
 'https://github.com/JoshuaMakuch/Oscilliscope
 
 
+Imports System.IO
 Imports System.IO.Ports
 Imports System.Linq.Expressions
 Imports System.Runtime.CompilerServices
@@ -31,9 +32,7 @@ Public Class OscilloscopeForm
     Dim NewData As Integer
     Dim DataIn1, DataIn2, DataIn3, DataIn4, DataIn5, DataIn6, DataIn7, DataIn8 As Integer
     Dim AnaInVal As Integer
-    Dim Records(96) As Single
-    Dim MaxValue As Single
-    Dim MinValue As Single
+    Dim Records As New List(Of Single)
 
     'On Form Load
     Private Sub OscilloscopeForm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -48,6 +47,7 @@ Public Class OscilloscopeForm
         VerticalOffsetBar.Maximum = PBDrawing.Height
         VerticalOffsetBar.Value = VerticalOffsetBar.Maximum / 2 'Sets vertical offsetbar to match the picturebox on startup
         OffsetTextBox.Text = $"{(VerticalOffsetBar.Value - PBDrawing.Height / 2) / 100} V" 'Sets offset textbox to 0v
+        TempRecordIntervalDomain.SelectedIndex = 0 'Sets the initial temp record interval to every 100mS
         TimePerDivisionDomain.SelectedIndex = 3 'Sets initial timer per divison to 1mS
         VoltsPerDivisionDomain.SelectedIndex = 2 'Sets initial votls per division to 1v
         VoltsPerDivisionDomain_SelectedItemChanged(sender, e)
@@ -57,10 +57,9 @@ Public Class OscilloscopeForm
         SerialPort1.DataBits = 8 '8 data bits
         SerialPort1.StopBits = IO.Ports.StopBits.One '1 stop bit
         SerialPort1.Parity = IO.Ports.Parity.None 'no parity
-        MaxValue = 0 'Sets the max and min values to 0v
-        MinValue = 0
-        MaxRecordedValueTextBox.Text = $"{MaxValue} V"
-        MinRecordedValueTextBox.Text = $"{MinValue} V"
+        Records.Add(0)
+        MaxRecordedValueTextBox.Text = $"{Records.Max} V"
+        MinRecordedValueTextBox.Text = $"{Records.Min} V"
 
         LastY = PBDrawing.Height / 2
     End Sub
@@ -94,9 +93,8 @@ Public Class OscilloscopeForm
             DrawIterations = 0
             DrawGrid()
             'Clear Records array
-            For i As Integer = 0 To Records.Length - 1
-                Records(i) = 0
-            Next
+            Records.Clear()
+            Records.Add(0)
             'Reset LastX and LastY
             LastX = 0
             LastY = PBDrawing.Height / 2
@@ -147,14 +145,12 @@ Public Class OscilloscopeForm
                         NewY = (((-AnaInVal * 3.3 / 1023) * VerticalScale) * PBDrawing.Height / 8) + (-VerticalOffsetBar.Value + PBDrawing.Height)
                     End If
 
-                    If DrawIterations Mod CInt(PBDrawing.Width / Records.Length) = 0 Then
+                    If DrawIterations Mod CInt(PBDrawing.Width / 96) = 0 Then
                         'This records every x / record length data point 
-                        Dim IndexRecord As Integer = CInt(DrawIterations / CInt(PBDrawing.Width / Records.Length))
-                        Records(IndexRecord) = Math.Round(-((NewY - PBDrawing.Height / 2) / VerticalScale / (PBDrawing.Height / 8)), 2)
-                        MaxValue = Records.Max
-                        MaxRecordedValueTextBox.Text = $"{MaxValue} V"
-                        MinValue = Records.Min
-                        MinRecordedValueTextBox.Text = $"{MinValue} V"
+                        Dim IndexRecord As Integer = CInt(DrawIterations / CInt(PBDrawing.Width / 96))
+                        Records.Add(Math.Round(-((NewY - PBDrawing.Height / 2) / VerticalScale / (PBDrawing.Height / 8)), 2))
+                        MaxRecordedValueTextBox.Text = $"{Records.Max} V"
+                        MinRecordedValueTextBox.Text = $"{Records.Min} V"
                     End If
 
 
@@ -171,28 +167,56 @@ Public Class OscilloscopeForm
             End Using
         ElseIf TemperatureDrawRadioButton.Checked Then
 
-            If DrawIterations < Records.Length - 1 Then
-                Using g As Graphics = Graphics.FromImage(PBDrawing.Image)
-                    'Find the equivalent voltage value and turn it into a usable height value
-                    NewY = (((-AnaInVal * 3.3 / 1023)) * PBDrawing.Height / 8) + PBDrawing.Height
-                    Records(DrawIterations) = Math.Round(AnaInVal * 3.3 / 1023, 2)
-                    MaxValue = Records.Max
-                    MaxRecordedValueTextBox.Text = $"{MaxValue} V"
-                    MinValue = Records.Min
-                    MinRecordedValueTextBox.Text = $"{MinValue} V"
+            If DrawIterations < 96 Then
+                'Find the equivalent voltage value and turn it into a usable height value
+                Records.Add(Math.Round(AnaInVal * 3.3 / 1023, 2))
+                MaxRecordedValueTextBox.Text = $"{Records.Max} V"
+                MinRecordedValueTextBox.Text = $"{Records.Min} V"
 
-                    VerticalScale = Math.Abs(MaxValue - MinValue) / 6.6
-                    'This ensures that the analog in value is properly scaled and drawn in the right spots according to the picture box and divisions
-                    NewY = CInt(((-Records(DrawIterations) * VerticalScale) * PBDrawing.Height / 8) + (PBDrawing.Height / 2))
-                    'Sets the NewX to whatever value 
-                    NewX = CInt(DrawIterations * (PBDrawing.Width / Records.Length))
-                    'This is what actually draws the line for incoming data or random data
-                    g.DrawLine(myPen, LastX, LastY, NewX, NewY)
-                    LastX = NewX
-                    LastY = NewY
+                'Clears the picture box every timer1 tick
+                bmp = New Bitmap(PBDrawing.Width, PBDrawing.Height) 'Sets the bitmap to be the size of the picture box
+                PBDrawing.Image = bmp
+                Using g As Graphics = Graphics.FromImage(PBDrawing.Image)
+                    For i As Integer = 1 To 9
+                        g.DrawLine(GridPen, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), 0, Convert.ToSingle((Math.Round(PBDrawing.Width * i / 10))), PBDrawing.Height)
+                    Next
+                    g.DrawLine(New Pen(Color.Red), 0, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(1 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Yellow), 0, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(2 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.White), 0, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(3 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Green), 0, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(4 * PBDrawing.Height / 5)))
+                    g.DrawLine(New Pen(Color.Blue), 0, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)), PBDrawing.Width, Convert.ToSingle(Math.Round(5 * PBDrawing.Height / 5)))
+                    'Reset LastX and LastY
+                    LastX = 0
+                    LastY = PBDrawing.Height / 2
+
+                    'Sets the vertical scale to the max and minimum
+                    VerticalScale = (PBDrawing.Height - 20) / (Records.Max - Records.Min + 0.0000001)
+
+                    'Redraws the entire records list array every timer1 tick
+                    For i As Integer = 0 To Records.Count - 1
+                        NewY = CInt(-(Records(i) * VerticalScale) + VerticalScale * (Records.Max + Records.Min) / 2) + (PBDrawing.Height / 2)
+                        'Sets the NewX to every n/record length where n is the draw iterations
+                        NewX = CInt(i * (PBDrawing.Width / 96))
+                        'This is what actually draws the line for incoming data or random data
+                        g.DrawLine(myPen, LastX, LastY, NewX, NewY)
+                        LastX = NewX
+                        LastY = NewY
+                    Next
 
                     PBDrawing.Refresh()
                     DrawIterations += 1
+
+                    'If a new item has been added, store into text file. Create if not there
+                    Try
+                        FileOpen(2, CurDir() & "\" & DateString & ".txt", OpenMode.Append) 'Open file for append
+                        WriteLine(2, TimeString & vbTab & CStr(Records.Last)) 'Store the last record value
+                        FileClose(2)
+                    Catch ex As Exception
+                        FileClose(2)
+                        File.Create(CurDir() & "\" & DateString & ".txt")
+                        FileClose(2)
+                    End Try
+
                 End Using
             Else
                 TemperatureDrawRadioButton_CheckedChanged(sender, e)
@@ -290,17 +314,14 @@ Public Class OscilloscopeForm
                 End Using
 
                 'Clear Records
-                For i As Integer = 0 To Records.Length - 1
-                    Records(i) = 0
-                Next
+                Records.Clear()
                 'Clear Draw Iterations
                 DrawIterations = 0
                 'Reset LastX and LastY
                 LastX = 0
                 LastY = PBDrawing.Height / 2
-
-                'Sets timer1 inteveral to 15 min invtervals
-                Timer1.Interval = 100
+                'Sets the interval time to what is currently selected
+                TempRecordIntervalDomain_SelectedItemChanged(sender, e)
 
 
             Else
@@ -323,6 +344,22 @@ Public Class OscilloscopeForm
             VoltsPerDivisionDomain_SelectedItemChanged(sender, e)
             TimePerDivisionDomain_SelectedItemChanged(sender, e)
             ClearButton_Click(sender, e)
+        End If
+    End Sub
+
+    'Handles the temp record interval change
+    Private Sub TempRecordIntervalDomain_SelectedItemChanged(sender As Object, e As EventArgs) Handles TempRecordIntervalDomain.SelectedItemChanged
+        If TemperatureDrawRadioButton.Checked Then
+            Select Case TempRecordIntervalDomain.SelectedItem
+                Case "100mS"
+                    Timer1.Interval = 100
+                Case "1s"
+                    Timer1.Interval = 1000
+                Case "1min"
+                    Timer1.Interval = 60000
+                Case "15min"
+                    Timer1.Interval = 9000000
+            End Select
         End If
     End Sub
 
